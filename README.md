@@ -46,7 +46,7 @@ api-performance-monitor/
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/api-performance-monitor.git
+git clone https://github.com/vruksha1309-glitch/api-performance-monitor
 cd api-performance-monitor
 ```
 
