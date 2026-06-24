@@ -1,103 +1,218 @@
 # API Performance Monitor
 
-## Project Overview
+A professional web-based system to continuously track API endpoints, record performance metrics, detect failures, and generate analytical reports — built as a final-year mini project.
 
-API Performance Monitor is a Python-based tool that monitors the health and performance of API endpoints. It sends HTTP requests to APIs, measures response times, records status codes, and stores the results in a log file for analysis.
+---
 
-This project helps developers identify slow APIs, monitor uptime, and track API performance over time.
+## Tech Stack
 
-## Features
+| Layer       | Technology          |
+|-------------|---------------------|
+| Backend     | Python 3.11+ / Flask |
+| Scheduler   | APScheduler         |
+| HTTP Client | Requests            |
+| Database    | SQLite              |
+| Frontend    | HTML5 / CSS3 / JS   |
+| Charts      | Chart.js 4          |
+| PDF Reports | ReportLab           |
+| Dashboard   | Grafana (optional)  |
 
-- Monitor API availability
-- Measure response times
-- Track HTTP status codes
-- Log API performance data
-- Generate performance reports
-- Simple and easy-to-use interface
+---
 
-## Technologies Used
+## Quick Start
 
-- Python 3
-- Requests
-- Pandas
-- CSV
-- Datetime
+```bash
+# 1. Clone / extract the project
+cd api_performance_monitor
+
+# 2. Create a virtual environment
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Run
+python run.py
+```
+
+Open **http://localhost:5000** — login with `admin` / `admin123`.
+
+---
 
 ## Project Structure
 
-api-performance-monitor/
-
-├── monitor.py
-
-├── report.py
-
-├── config.py
-
+```
+api_performance_monitor/
+├── run.py                          # Entry point
 ├── requirements.txt
+├── app/
+│   ├── __init__.py                 # App factory
+│   ├── config.py                   # Configuration
+│   ├── database.py                 # DB init & helpers
+│   ├── auth/
+│   │   └── routes.py               # Login / logout / change-password
+│   ├── dashboard/
+│   │   └── routes.py               # Stats & chart JSON APIs
+│   ├── monitoring/
+│   │   ├── routes.py               # API CRUD & manual test
+│   │   └── scheduler.py            # APScheduler background pings
+│   ├── reports/
+│   │   └── routes.py               # CSV & PDF export
+│   └── alerts/
+│       └── routes.py               # Active alerts & failure history
+├── templates/
+│   ├── base.html
+│   ├── auth/   login.html  change_password.html
+│   ├── dashboard/  index.html
+│   ├── monitoring/ index.html  add.html  edit.html  logs.html
+│   ├── alerts/     index.html
+│   └── reports/    index.html
+├── static/
+│   ├── css/style.css
+│   └── js/  main.js  dashboard.js  monitoring.js  alerts.js  reports.js
+├── database/
+│   └── monitor.db                  # Auto-created on first run
+├── scripts/
+│   └── schema.sql                  # Standalone SQL schema
+├── grafana/
+│   └── GRAFANA_SETUP.md
+├── tests/
+│   └── test_app.py                 # pytest test suite
+└── docs/
+    └── ARCHITECTURE.md
+```
 
-├── logs.csv
+---
 
-├── README.md
+## Features
 
-└── .gitignore
+### User Authentication
+- SHA-256 password hashing
+- Flask session management
+- Route-level `@login_required` decorator
 
-## Installation
+### API Management
+- Add / Edit / Delete / Toggle (enable/disable) endpoints
+- Manual one-click test with instant results
+- Per-API log history (last 100 results)
 
-1. Clone the repository:
+### Automatic Monitoring
+- APScheduler pings every API at its configured interval
+- Measures response time (ms), HTTP status code, availability
+- New APIs are detected automatically every 30 s without restart
+
+### Analytics Dashboard
+- 6 live stat cards: total APIs, active, avg RT, total reqs, failures, uptime %
+- Response-time line chart (24 h, per API)
+- Daily request volume bar chart (7 d)
+- Per-API availability doughnut chart
+- Live activity table (last 20 results)
+
+### Alert System
+- Detects downed APIs (last log = unavailable)
+- Slow-response alerts (configurable threshold, default 2 s)
+- Low-uptime alerts (configurable threshold, default 95 %)
+- Alert count badge in sidebar, auto-refreshes every 30 s
+
+### Reporting
+- CSV export (all logs, date-range filtered, per-API filter)
+- PDF export via ReportLab (summary + detail table)
+- Per-API uptime summary table
+- Report history log
+
+### Grafana Integration
+- See `grafana/GRAFANA_SETUP.md` for data source + panel query setup
+
+---
+
+## Configuration
+
+Edit `app/config.py`:
+
+| Setting                    | Default | Description                         |
+|----------------------------|---------|-------------------------------------|
+| `DEFAULT_MONITOR_INTERVAL` | 60 s    | Fallback interval for new APIs      |
+| `REQUEST_TIMEOUT`          | 10 s    | Per-request timeout                 |
+| `RESPONSE_TIME_THRESHOLD`  | 2000 ms | Alert if response time exceeds this |
+| `UPTIME_THRESHOLD`         | 95.0 %  | Alert if 24 h uptime drops below    |
+
+---
+
+## Running Tests
 
 ```bash
-git clone https://github.com/vruksha1309-glitch/api-performance-monitor
-cd api-performance-monitor
+pip install pytest
+pytest tests/ -v
 ```
 
-2. Install dependencies:
+---
 
-```bash
-pip install -r requirements.txt
+## System Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      Browser (Client)                   │
+│        HTML + Chart.js + JS fetch() polling             │
+└──────────────────────┬──────────────────────────────────┘
+                       │ HTTP
+┌──────────────────────▼──────────────────────────────────┐
+│                  Flask Web Server                        │
+│   ┌──────────┐ ┌────────────┐ ┌─────────┐ ┌─────────┐  │
+│   │  auth BP │ │dashboard BP│ │monitor  │ │reports  │  │
+│   └──────────┘ └────────────┘ │   BP    │ │   BP    │  │
+│                               └────┬────┘ └─────────┘  │
+│   ┌──────────────────────────────┐ │                    │
+│   │   APScheduler (background)   │ │ CRUD               │
+│   │   pings active APIs every N s│ │                    │
+│   └─────────────────┬────────────┘ │                    │
+└─────────────────────┼──────────────┼────────────────────┘
+                      │ INSERT       │ SELECT/INSERT/UPDATE
+          ┌───────────▼──────────────▼──────────┐
+          │            SQLite DB                 │
+          │  users | apis | monitoring_logs      │
+          │         | reports                    │
+          └──────────────────┬──────────────────┘
+                             │ SQL (optional)
+                     ┌───────▼──────┐
+                     │    Grafana   │
+                     │  dashboards  │
+                     └──────────────┘
 ```
 
-## Usage
+---
 
-Run the monitoring script:
+## Database Schema
 
-```bash
-python monitor.py
+```
+users            apis                monitoring_logs      reports
+────────         ────────────────    ───────────────────  ───────────
+id (PK)          id (PK)             id (PK)              id (PK)
+username         api_name            api_id (FK→apis)     report_name
+password         endpoint_url        response_time        report_type
+role             monitoring_interval status_code          file_path
+created_at       status              availability         generated_at
+                 created_at          error_message
+                                     monitored_at
 ```
 
-Generate a report:
+---
 
-```bash
-python report.py
-```
+## Future Enhancements
 
-## Example Output
+1. **Email / SMS Alerts** — SMTP or Twilio integration when an API goes down
+2. **Multi-user Roles** — viewer-only accounts alongside admin
+3. **WebSocket Live Feed** — push monitoring results to dashboard in real time
+4. **SLA Tracking** — monthly uptime percentage targets per API
+5. **Response Body Validation** — assert expected JSON keys or values
+6. **Rate-limit Detection** — detect HTTP 429 patterns
+7. **Docker Compose Setup** — one-command deployment with Grafana container
+8. **Prometheus Exporter** — expose `/metrics` endpoint for Prometheus scraping
+9. **AI Anomaly Detection** — flag unusual response-time spikes
+10. **Mobile App** — React Native client consuming the existing JSON APIs
 
-```text
-API: https://jsonplaceholder.typicode.com/posts
-Status Code: 200
-Response Time: 0.25 seconds
-Timestamp: 2026-06-24 10:30:15
-```
-
-## Log File Example
-
-```csv
-Timestamp,API_URL,Status_Code,Response_Time
-2026-06-24 10:30:15,https://jsonplaceholder.typicode.com/posts,200,0.25
-2026-06-24 10:31:15,https://jsonplaceholder.typicode.com/posts,200,0.21
-```
-
-## Future Improvements
-
-- Email notifications
-- Real-time dashboard
-- Database integration
-- Performance charts
-- Multi-API monitoring
-
-## Author
-T VRUKSHA
+---
 
 ## License
 
-This project is licensed under the MIT License.
+MIT — free to use for educational and commercial purposes.

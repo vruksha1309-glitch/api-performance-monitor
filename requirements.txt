@@ -1,0 +1,14 @@
+# API Performance Monitor — Dependencies
+# Install: pip install -r requirements.txt
+
+Flask>=3.0.0
+reportlab>=4.0.0
+
+# Optional (enhanced scheduling — falls back to stdlib threading if unavailable):
+# APScheduler>=3.10.0
+
+# Optional (Grafana integration):
+# requests>=2.32.0
+
+# Testing:
+# pytest>=8.0.0
